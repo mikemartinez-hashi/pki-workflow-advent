@@ -175,7 +175,7 @@ User=root
 Environment="VAULT_PKI_ROLE_PATH=${pki_role_path}"
 Environment="VAULT_COMMON_NAME=${common_name}"
 Environment="VAULT_CERT_TTL=${cert_ttl}"
-ExecStart=/usr/bin/vault agent -config=${VAULT_DIR}/vault-agent.hcl
+ExecStart=/usr/bin/vault agent -config=$${VAULT_DIR}/vault-agent.hcl
 Restart=on-failure
 RestartSec=10
 
