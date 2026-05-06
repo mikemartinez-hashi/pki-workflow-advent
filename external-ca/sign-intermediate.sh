@@ -7,6 +7,11 @@ CADIR="./external-ca/ca-data"
 CSR_FILE="$1"
 OUTPUT_CERT="$2"
 
+if [ ! -f "$CADIR/openssl.cnf" ]; then
+    echo "[External CA] Infrastructure not found. Initializing ephemeral external CA..."
+    bash ./scripts/setup-external-ca.sh
+fi
+
 echo "[External CA] Received CSR from Vault..."
 echo "[External CA] Signing as subordinate CA (simulating Sectigo approval)..."
 
