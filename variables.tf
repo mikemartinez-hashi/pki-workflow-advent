@@ -19,7 +19,13 @@ variable "key_name" {
 variable "environment" {
   description = "Environment tag"
   type        = string
-  default     = "demo"
+  default     = "Demo"
+}
+
+variable "owner" {
+  description = "Owner tag"
+  type        = string
+  default     = "SE Team"
 }
 
 variable "cert_ttl" {

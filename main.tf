@@ -194,6 +194,7 @@ resource "aws_instance" "apache" {
   tags = {
     Name        = "vault-demo-apache"
     Environment = var.environment
+    Owner       = var.owner
     Platform    = "apache"
     ManagedBy   = "terraform"
   }
@@ -230,6 +231,7 @@ resource "aws_instance" "tomcat" {
   tags = {
     Name        = "vault-demo-tomcat"
     Environment = var.environment
+    Owner       = var.owner
     Platform    = "tomcat"
     ManagedBy   = "terraform"
   }
@@ -265,6 +267,7 @@ resource "aws_instance" "iis" {
   tags = {
     Name        = "vault-demo-iis"
     Environment = var.environment
+    Owner       = var.owner
     Platform    = "iis"
     ManagedBy   = "terraform"
   }
