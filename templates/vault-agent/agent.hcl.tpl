@@ -24,7 +24,7 @@ vault {
 
 auto_auth {
   method "approle" {
-    mount_path = "auth/approle"
+    mount_path = "auth/${approle_mount}"
     config = {
       role_id_file_path                = "${cert_base_dir}/role_id"
       secret_id_file_path              = "${cert_base_dir}/secret_id"

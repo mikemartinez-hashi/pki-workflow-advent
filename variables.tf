@@ -69,3 +69,8 @@ variable "instance_type_windows" {
   type        = string
   default     = "t3.medium"
 }
+
+variable "customer_name" {
+  description = "Customer name used as a suffix for Vault mounts (e.g. advent)"
+  type        = string
+}

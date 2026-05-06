@@ -7,7 +7,7 @@ provider "vault" {
 
 # ── Root CA ────────────────────────────────────────────────────────────────
 resource "vault_mount" "pki_root" {
-  path                      = "pki"
+  path                      = "pki_${var.customer_name}"
   type                      = "pki"
   description               = "Root CA"
   default_lease_ttl_seconds = 86400
@@ -33,7 +33,7 @@ resource "vault_pki_secret_backend_config_urls" "root_urls" {
 
 # ── Intermediate CA ────────────────────────────────────────────────────────
 resource "vault_mount" "pki_int" {
-  path                      = "pki_int"
+  path                      = "pki_int_${var.customer_name}"
   type                      = "pki"
   description               = "Intermediate CA"
   default_lease_ttl_seconds = 86400
@@ -127,6 +127,7 @@ resource "vault_policy" "policies" {
 # ── AppRole Authentication ─────────────────────────────────────────────────
 resource "vault_auth_backend" "approle" {
   type = "approle"
+  path = "approle_${var.customer_name}"
 }
 
 resource "vault_approle_auth_backend_role" "roles" {

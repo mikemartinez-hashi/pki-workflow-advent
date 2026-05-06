@@ -1,0 +1,15 @@
+{
+  "role_type": "jwt",
+  "policies": [
+    "tfc-admin-role"
+  ],
+  "token_explicit_max_ttl": 1200,
+  "user_claim": "terraform_run_id",
+  "bound_audiences": [
+    "vault.workload.identity"
+  ],
+  "bound_claims_type": "glob",
+  "bound_claims": {
+    "sub": "organization:Mikes_sandbox:project:*:workspace:*:run_phase:*"
+  }
+}
