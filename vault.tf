@@ -1,8 +1,8 @@
 # ── Provider ───────────────────────────────────────────────────────────────
 provider "vault" {
-  address   = var.vault_addr
-  namespace = var.vault_namespace
-  # Authentication is typically handled via the VAULT_TOKEN environment variable
+  # When using HCP Terraform, the provider automatically authenticates using OIDC
+  # via the TFC_VAULT_ADDR, TFC_VAULT_NAMESPACE, and TFC_VAULT_RUN_ROLE environment variables.
+  # We leave this block empty to allow TFC to natively inject those credentials.
 }
 
 # ── Root CA ────────────────────────────────────────────────────────────────
