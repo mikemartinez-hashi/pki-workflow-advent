@@ -16,7 +16,7 @@ New-Item -ItemType Directory -Force -Path "C:\Vault\logs" | Out-Null
 Write-Host "Downloading and installing Vault..."
 $latestUrl = "https://api.releases.hashicorp.com/v1/releases/vault/latest?license_class=oss"
 $vaultVersion = (Invoke-RestMethod -Uri $latestUrl).version
-$vaultUrl = "https://releases.hashicorp.com/vault/${vaultVersion}/vault_${vaultVersion}_windows_amd64.zip"
+$vaultUrl = "https://releases.hashicorp.com/vault/$${vaultVersion}/vault_$${vaultVersion}_windows_amd64.zip"
 $zipPath = "C:\Vault\vault.zip"
 Invoke-WebRequest -Uri $vaultUrl -OutFile $zipPath
 Expand-Archive -Path $zipPath -DestinationPath "C:\Vault" -Force

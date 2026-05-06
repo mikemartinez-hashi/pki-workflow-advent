@@ -89,23 +89,23 @@ KEYSTORE_DIR="/var/lib/tomcat10/conf"
 if [ ! -d "$KEYSTORE_DIR" ]; then
     KEYSTORE_DIR="/opt/tomcat/conf"
 fi
-KEYSTORE_PASS="${KEYSTORE_PASS:-changeit}"
-KEYSTORE_FILE="${KEYSTORE_DIR}/vault-keystore.p12"
-KEYSTORE_TMP="${KEYSTORE_FILE}.tmp"
+KEYSTORE_PASS="$${KEYSTORE_PASS:-changeit}"
+KEYSTORE_FILE="$KEYSTORE_DIR/vault-keystore.p12"
+KEYSTORE_TMP="$KEYSTORE_FILE.tmp"
 
 mkdir -p "$KEYSTORE_DIR"
 
 echo "[$(date)] Converting cert to PKCS12 keystore..."
 openssl pkcs12 -export \
-    -in "${CERT_DIR}/cert.pem" \
-    -inkey "${CERT_DIR}/key.pem" \
-    -certfile "${CERT_DIR}/chain.pem" \
-    -out "${KEYSTORE_TMP}" \
-    -passout "pass:${KEYSTORE_PASS}" \
+    -in "$CERT_DIR/cert.pem" \
+    -inkey "$CERT_DIR/key.pem" \
+    -certfile "$CERT_DIR/chain.pem" \
+    -out "$KEYSTORE_TMP" \
+    -passout "pass:$KEYSTORE_PASS" \
     -name "vault-cert"
 
-mv "${KEYSTORE_TMP}" "${KEYSTORE_FILE}"
-chmod 640 "${KEYSTORE_FILE}"
+mv "$KEYSTORE_TMP" "$KEYSTORE_FILE"
+chmod 640 "$KEYSTORE_FILE"
 
 echo "[$(date)] Reloading Tomcat..."
 systemctl reload tomcat10 2>/dev/null || systemctl restart tomcat10
