@@ -181,14 +181,14 @@ resource "aws_instance" "apache" {
     role_id         = vault_approle_auth_backend_role.roles["apache"].role_id
     secret_id       = vault_approle_auth_backend_role_secret_id.secret_ids["apache"].secret_id
     platform        = "apache"
+    pki_role_path   = "${vault_mount.pki_int.path}/issue/apache-role-${var.customer_name}"
+    common_name     = var.cert_domain_linux
+    cert_ttl        = var.cert_ttl
     vault_agent_config = templatefile("${path.module}/templates/vault-agent/agent.hcl.tpl", {
       vault_addr      = var.vault_addr
       vault_namespace = var.vault_namespace
       approle_mount   = vault_auth_backend.approle.path
       cert_base_dir   = "/etc/vault-agent"
-      pki_role_path   = "${vault_mount.pki_int.path}/issue/apache-role-${var.customer_name}"
-      common_name     = var.cert_domain_linux
-      cert_ttl        = var.cert_ttl
       exec_command    = jsonencode(["systemctl", "reload", "apache2"])
       exec_timeout    = "30s"
     })
@@ -221,14 +221,14 @@ resource "aws_instance" "tomcat" {
     role_id         = vault_approle_auth_backend_role.roles["tomcat"].role_id
     secret_id       = vault_approle_auth_backend_role_secret_id.secret_ids["tomcat"].secret_id
     platform        = "tomcat"
+    pki_role_path   = "${vault_mount.pki_int.path}/issue/tomcat-role-${var.customer_name}"
+    common_name     = var.cert_domain_tomcat
+    cert_ttl        = var.cert_ttl
     vault_agent_config = templatefile("${path.module}/templates/vault-agent/agent.hcl.tpl", {
       vault_addr      = var.vault_addr
       vault_namespace = var.vault_namespace
       approle_mount   = vault_auth_backend.approle.path
       cert_base_dir   = "/etc/vault-agent"
-      pki_role_path   = "${vault_mount.pki_int.path}/issue/tomcat-role-${var.customer_name}"
-      common_name     = var.cert_domain_tomcat
-      cert_ttl        = var.cert_ttl
       exec_command    = jsonencode(["/etc/vault-agent/hooks/tomcat-reload.sh"])
       exec_timeout    = "60s"
     })
@@ -260,14 +260,14 @@ resource "aws_instance" "iis" {
     vault_namespace = var.vault_namespace
     role_id         = vault_approle_auth_backend_role.roles["iis"].role_id
     secret_id       = vault_approle_auth_backend_role_secret_id.secret_ids["iis"].secret_id
+    pki_role_path   = "${vault_mount.pki_int.path}/issue/iis-role-${var.customer_name}"
+    common_name     = var.cert_domain_windows
+    cert_ttl        = var.cert_ttl
     vault_agent_config = templatefile("${path.module}/templates/vault-agent/agent.hcl.tpl", {
       vault_addr      = var.vault_addr
       vault_namespace = var.vault_namespace
       approle_mount   = vault_auth_backend.approle.path
       cert_base_dir   = "C:\\Vault"
-      pki_role_path   = "${vault_mount.pki_int.path}/issue/iis-role-${var.customer_name}"
-      common_name     = var.cert_domain_windows
-      cert_ttl        = var.cert_ttl
       exec_command    = jsonencode(["powershell.exe", "-File", "C:\\Vault\\hooks\\bind-cert.ps1"])
       exec_timeout    = "60s"
     })

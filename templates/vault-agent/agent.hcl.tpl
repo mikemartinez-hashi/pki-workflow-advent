@@ -1,18 +1,14 @@
 # =============================================================================
-# Vault Agent Config — Simplified
-# =============================================================================
-# All values are resolved by Terraform's templatefile() at apply time.
-# No environment variables, no separate .tpl files, no env() calls.
+# Vault Agent Config
+# Values resolved by Terraform templatefile() at apply time.
+# No env() calls, no runtime environment variables required.
 #
-# Variables injected by Terraform:
+# Variables:
 #   vault_addr      - HCP Vault cluster address
 #   vault_namespace - Vault namespace
 #   approle_mount   - AppRole auth mount path
 #   cert_base_dir   - /etc/vault-agent (Linux) or C:\Vault (Windows)
-#   pki_role_path   - Full PKI issue path e.g. pki_int_advent/issue/apache-role
-#   common_name     - Certificate CN e.g. apache.demo.internal
-#   cert_ttl        - Certificate TTL e.g. 720h
-#   exec_command    - JSON array for post-render hook
+#   exec_command    - JSON array for post-render exec hook
 #   exec_timeout    - Hook timeout string
 # =============================================================================
 
@@ -44,17 +40,9 @@ template_config {
   exit_on_retry_failure = true
 }
 
-# Certificate + CA chain — triggers exec hook on renewal
-# Vault Agent template syntax is inside TPL heredocs and processed at runtime.
+# Certificate + CA chain — tpl file has values baked in by Terraform
 template {
-  contents = <<-TPL
-    {{- with secret "${pki_role_path}" "common_name=${common_name}" "ttl=${cert_ttl}" -}}
-    {{ .Data.certificate -}}
-    {{ range .Data.ca_chain -}}
-    {{ . -}}
-    {{ end -}}
-    {{- end }}
-  TPL
+  source               = "${cert_base_dir}/tpl/cert.tpl"
   destination          = "${cert_base_dir}/certs/cert.pem"
   perms                = 0644
   error_on_missing_key = true
@@ -64,27 +52,17 @@ template {
   }
 }
 
-# Private key — tighter permissions, no exec hook
+# Private key
 template {
-  contents = <<-TPL
-    {{- with secret "${pki_role_path}" "common_name=${common_name}" "ttl=${cert_ttl}" -}}
-    {{ .Data.private_key -}}
-    {{- end }}
-  TPL
+  source               = "${cert_base_dir}/tpl/key.tpl"
   destination          = "${cert_base_dir}/certs/key.pem"
   perms                = 0640
   error_on_missing_key = true
 }
 
-# CA chain — used by Apache SSLCertificateChainFile and Tomcat
+# CA chain
 template {
-  contents = <<-TPL
-    {{- with secret "${pki_role_path}" "common_name=${common_name}" "ttl=${cert_ttl}" -}}
-    {{ range .Data.ca_chain -}}
-    {{ . -}}
-    {{ end -}}
-    {{- end }}
-  TPL
+  source               = "${cert_base_dir}/tpl/chain.tpl"
   destination          = "${cert_base_dir}/certs/chain.pem"
   perms                = 0644
   error_on_missing_key = true
