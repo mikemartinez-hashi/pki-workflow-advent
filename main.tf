@@ -190,7 +190,7 @@ resource "aws_instance" "apache" {
       vault_namespace = var.vault_namespace
       approle_mount   = vault_auth_backend.approle.path
       cert_base_dir   = "/etc/vault-agent"
-      exec_command    = jsonencode(["systemctl", "reload", "apache2"])
+      exec_command    = jsonencode(["/etc/vault-agent/hooks/apache-reload.sh"])
       exec_timeout    = "30s"
     })
   })

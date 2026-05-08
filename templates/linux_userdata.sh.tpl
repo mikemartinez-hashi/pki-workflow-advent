@@ -35,8 +35,8 @@ echo "Vault $(vault version) installed."
 if [ "${platform}" = "apache" ]; then
   apt-get install -y apache2
   systemctl enable apache2
-  systemctl start apache2
   a2enmod ssl
+
   cat > /etc/apache2/sites-available/vault-demo-ssl.conf << 'SSLCONF'
 <VirtualHost *:443>
     ServerName apache.demo.internal
@@ -47,22 +47,42 @@ if [ "${platform}" = "apache" ]; then
 </VirtualHost>
 SSLCONF
   a2ensite vault-demo-ssl
-  systemctl reload apache2 || true
+  # Do NOT start Apache here -- cert files don't exist yet.
+  # Vault Agent will write them and fire the hook which starts Apache.
+
+  # Hook script: handles both stopped and running Apache
+  mkdir -p /etc/vault-agent/hooks
+  cat > /etc/vault-agent/hooks/apache-reload.sh << 'HOOK'
+#!/bin/bash
+echo "[$(date)] Apache cert hook fired."
+if systemctl is-active apache2 &>/dev/null; then
+    systemctl reload apache2
+    echo "[$(date)] Apache reloaded."
+else
+    systemctl start apache2
+    echo "[$(date)] Apache started."
+fi
+exit 0
+HOOK
+  chmod +x /etc/vault-agent/hooks/apache-reload.sh
 
 elif [ "${platform}" = "tomcat" ]; then
   apt-get install -y tomcat10 tomcat10-admin
+  systemctl stop tomcat10 || true   # stop so we can write server.xml before certs exist
+
   mkdir -p /opt/tomcat/conf
   chown -R tomcat:tomcat /opt/tomcat 2>/dev/null || true
 
-  # Tomcat exec hook — written as plain bash, no variables needed at runtime
   mkdir -p /etc/vault-agent/hooks
   cat > /etc/vault-agent/hooks/tomcat-reload.sh << 'HOOK'
 #!/bin/bash
-set -eo pipefail
+# No set -eo pipefail -- we handle errors explicitly
 CERT_DIR="/etc/vault-agent/certs"
 KEYSTORE_DIR="/var/lib/tomcat10/conf"
 [ -d "$KEYSTORE_DIR" ] || KEYSTORE_DIR="/opt/tomcat/conf"
 mkdir -p "$KEYSTORE_DIR"
+
+echo "[$(date)] Tomcat cert hook fired."
 
 openssl pkcs12 -export \
     -in  "$CERT_DIR/cert.pem" \
@@ -72,10 +92,19 @@ openssl pkcs12 -export \
     -passout "pass:changeit" \
     -name "vault-cert"
 
+if [ $? -ne 0 ]; then
+    echo "[$(date)] ERROR: openssl pkcs12 export failed."
+    exit 1
+fi
+
 mv "$KEYSTORE_DIR/vault-keystore.p12.tmp" "$KEYSTORE_DIR/vault-keystore.p12"
 chmod 640 "$KEYSTORE_DIR/vault-keystore.p12"
-systemctl reload tomcat10 2>/dev/null || systemctl restart tomcat10
+chown root:tomcat "$KEYSTORE_DIR/vault-keystore.p12" 2>/dev/null || true
+
+echo "[$(date)] Keystore written. Restarting Tomcat..."
+systemctl restart tomcat10
 echo "[$(date)] Tomcat cert rotation complete."
+exit 0
 HOOK
   chmod +x /etc/vault-agent/hooks/tomcat-reload.sh
 
@@ -107,6 +136,8 @@ HOOK
   </Service>
 </Server>
 TOMCATXML
+  # Do NOT start Tomcat here -- keystore doesn't exist yet.
+  # Vault Agent will write it and fire the hook which starts Tomcat.
 fi
 
 # ── Vault Agent directories ────────────────────────────────────────────────
