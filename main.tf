@@ -31,12 +31,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-provider "vault" {
-  # When using HCP Terraform, the provider automatically authenticates using OIDC
-  # via the TFC_VAULT_ADDR, TFC_VAULT_NAMESPACE, and TFC_VAULT_RUN_ROLE environment variables.
-  # We leave this block empty to allow TFC to natively inject those credentials.
-}
-
 # ── Data sources ───────────────────────────────────────────────────────────
 
 # Ubuntu 24.04 (Apache + Tomcat)
