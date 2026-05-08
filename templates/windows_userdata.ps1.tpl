@@ -1,168 +1,111 @@
 <powershell>
 $ErrorActionPreference = "Stop"
+New-Item -ItemType Directory -Force -Path "C:\Vault\certs" | Out-Null
+New-Item -ItemType Directory -Force -Path "C:\Vault\hooks" | Out-Null
+New-Item -ItemType Directory -Force -Path "C:\Vault\logs"  | Out-Null
 Start-Transcript -Path "C:\Vault\logs\userdata-transcript.txt"
 
 Write-Host "========================================"
 Write-Host " Vault Agent Bootstrap (Windows IIS)"
 Write-Host "========================================"
 
-# Create directories
-New-Item -ItemType Directory -Force -Path "C:\Vault\certs" | Out-Null
-New-Item -ItemType Directory -Force -Path "C:\Vault\tpl" | Out-Null
-New-Item -ItemType Directory -Force -Path "C:\Vault\hooks" | Out-Null
-New-Item -ItemType Directory -Force -Path "C:\Vault\logs" | Out-Null
+# ── Install Vault ──────────────────────────────────────────────────────────
+Write-Host "Installing Vault..."
+$latestUrl  = "https://api.releases.hashicorp.com/v1/releases/vault/latest?license_class=oss"
+$vaultVer   = (Invoke-RestMethod -Uri $latestUrl).version
+$vaultUrl   = "https://releases.hashicorp.com/vault/$vaultVer/vault_$${vaultVer}_windows_amd64.zip"
+Invoke-WebRequest -Uri $vaultUrl -OutFile "C:\Vault\vault.zip"
+Expand-Archive  -Path "C:\Vault\vault.zip" -DestinationPath "C:\Vault" -Force
+Remove-Item      "C:\Vault\vault.zip"
+[System.Environment]::SetEnvironmentVariable(
+    "Path", $env:Path + ";C:\Vault",
+    [System.EnvironmentVariableTarget]::Machine)
+$env:Path += ";C:\Vault"
 
-# Install AWS SSM Agent (since hc-base AMIs don't include it by default)
-Write-Host "Installing AWS SSM Agent..."
-$ssmUrl = "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/windows_amd64/AmazonSSMAgentSetup.exe"
-Invoke-WebRequest -Uri $ssmUrl -OutFile "C:\AmazonSSMAgentSetup.exe"
-Start-Process -FilePath "C:\AmazonSSMAgentSetup.exe" -ArgumentList "/install /quiet /norestart" -Wait
-Remove-Item "C:\AmazonSSMAgentSetup.exe" -Force
-
-# Install Vault
-Write-Host "Downloading and installing Vault..."
-$latestUrl = "https://api.releases.hashicorp.com/v1/releases/vault/latest?license_class=oss"
-$vaultVersion = (Invoke-RestMethod -Uri $latestUrl).version
-$vaultUrl = "https://releases.hashicorp.com/vault/$${vaultVersion}/vault_$${vaultVersion}_windows_amd64.zip"
-$zipPath = "C:\Vault\vault.zip"
-Invoke-WebRequest -Uri $vaultUrl -OutFile $zipPath
-Expand-Archive -Path $zipPath -DestinationPath "C:\Vault" -Force
-Remove-Item $zipPath
-[System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Vault", [System.EnvironmentVariableTarget]::Machine)
-$env:Path = $env:Path + ";C:\Vault"
-
-# Install IIS
+# ── Install IIS ────────────────────────────────────────────────────────────
 Write-Host "Installing IIS..."
-Install-WindowsFeature -name Web-Server -IncludeManagementTools
+Install-WindowsFeature -Name Web-Server -IncludeManagementTools
 
-# Write credentials
-Set-Content -Path "C:\Vault\role_id" -Value "${role_id}" -NoNewline
+# ── Install Chocolatey + OpenSSL + NSSM ───────────────────────────────────
+Write-Host "Installing Chocolatey, OpenSSL, NSSM..."
+if (!(Get-Command choco -ErrorAction SilentlyContinue)) {
+    Set-ExecutionPolicy Bypass -Scope Process -Force
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
+    iex ((New-Object Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+}
+choco install openssl nssm -y --no-progress
+
+# ── AppRole credentials ────────────────────────────────────────────────────
+Write-Host "Writing AppRole credentials..."
+Set-Content -Path "C:\Vault\role_id"   -Value "${role_id}"   -NoNewline
 Set-Content -Path "C:\Vault\secret_id" -Value "${secret_id}" -NoNewline
 
-# Write templates
-$certTpl = @"
-{{- with secret (env "VAULT_PKI_ROLE_PATH") (printf "common_name=%s" (env "VAULT_COMMON_NAME")) (printf "ttl=%s" (env "VAULT_CERT_TTL")) -}}
-{{ .Data.certificate -}}
-{{ range .Data.ca_chain -}}
-{{ . -}}
-{{ end -}}
-{{- end }}
-"@
-Set-Content -Path "C:\Vault\tpl\cert.tpl" -Value $certTpl
-
-$keyTpl = @"
-{{- with secret (env "VAULT_PKI_ROLE_PATH") (printf "common_name=%s" (env "VAULT_COMMON_NAME")) (printf "ttl=%s" (env "VAULT_CERT_TTL")) -}}
-{{ .Data.private_key -}}
-{{- end }}
-"@
-Set-Content -Path "C:\Vault\tpl\key.tpl" -Value $keyTpl
-
-$chainTpl = @"
-{{- with secret (env "VAULT_PKI_ROLE_PATH") (printf "common_name=%s" (env "VAULT_COMMON_NAME")) (printf "ttl=%s" (env "VAULT_CERT_TTL")) -}}
-{{ range .Data.ca_chain -}}
-{{ . -}}
-{{ end -}}
-{{- end }}
-"@
-Set-Content -Path "C:\Vault\tpl\chain.tpl" -Value $chainTpl
-
-# Write bind-cert.ps1 hook
-$hookContent = @"
-# bind-cert.ps1
-# Imports Vault-issued certificate into Windows cert store
-# and updates IIS HTTPS binding - runs on each cert renewal
-
+# ── bind-cert.ps1 hook ─────────────────────────────────────────────────────
+Write-Host "Writing bind-cert hook..."
+$bindCert = @'
 param(
-    [string]`$CertPath    = "C:\Vault\certs\cert.pem",
-    [string]`$KeyPath     = "C:\Vault\certs\key.pem",
-    [string]`$ChainPath   = "C:\Vault\certs\chain.pem",
-    [string]`$SiteName    = "Default Web Site",
-    [string]`$LogPath     = "C:\Vault\logs\bind-cert.log",
-    [int]`$Port           = 443
+    [string]$CertPath  = "C:\Vault\certs\cert.pem",
+    [string]$KeyPath   = "C:\Vault\certs\key.pem",
+    [string]$ChainPath = "C:\Vault\certs\chain.pem",
+    [string]$SiteName  = "Default Web Site",
+    [string]$LogPath   = "C:\Vault\logs\bind-cert.log",
+    [int]$Port         = 443
 )
+$ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+function Log($m) { "[$ts] $m" | Tee-Object -FilePath $LogPath -Append }
 
-`$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+New-Item -ItemType Directory -Force -Path (Split-Path $LogPath) | Out-Null
+Log "Starting cert bind..."
 
-function Write-Log {
-    param([string]`$Message)
-    `$entry = "[`$timestamp] `$Message"
-    Add-Content -Path `$LogPath -Value `$entry
-    Write-Host `$entry
+$pfxPath = "C:\Vault\certs\vault-cert.pfx"
+$pfxPass = "vault-temp-$(Get-Random)"
+
+& openssl pkcs12 -export -in $CertPath -inkey $KeyPath -certfile $ChainPath `
+    -out $pfxPath -passout "pass:$pfxPass" -name "vault-cert" 2>&1 | Out-Null
+
+$sec  = ConvertTo-SecureString -String $pfxPass -Force -AsPlainText
+$cert = Import-PfxCertificate -FilePath $pfxPath `
+            -CertStoreLocation Cert:\LocalMachine\My -Password $sec
+Log "Imported cert. Thumbprint: $($cert.Thumbprint) Expiry: $($cert.NotAfter)"
+Remove-Item $pfxPath -Force
+
+Import-Module WebAdministration
+$b = Get-WebBinding -Name $SiteName -Protocol https -Port $Port -ErrorAction SilentlyContinue
+if (-not $b) {
+    New-WebBinding -Name $SiteName -IP "*" -Port $Port -Protocol https
+    $b = Get-WebBinding -Name $SiteName -Protocol https -Port $Port
 }
+$b.AddSslCertificate($cert.Thumbprint, "My")
+Log "IIS HTTPS binding updated on port $Port"
 
-Write-Log "Starting cert bind process..."
+$pool = (Get-Website -Name $SiteName).applicationPool
+Restart-WebAppPool -Name $pool
+Log "App pool '$pool' restarted. Bind complete."
+'@
+Set-Content -Path "C:\Vault\hooks\bind-cert.ps1" -Value $bindCert
 
-New-Item -ItemType Directory -Force -Path (Split-Path `$LogPath) | Out-Null
-
-try {
-    `$pfxPath = "C:\Vault\certs\vault-cert.pfx"
-    `$pfxPass = "vault-temp-`$(Get-Random)"
-
-    & openssl pkcs12 -export `
-        -in `$CertPath `
-        -inkey `$KeyPath `
-        -certfile `$ChainPath `
-        -out `$pfxPath `
-        -passout "pass:`$pfxPass" `
-        -name "vault-cert" 2>&1 | Out-Null
-
-    Write-Log "PFX created at `$pfxPath"
-
-    `$secPass = ConvertTo-SecureString -String `$pfxPass -Force -AsPlainText
-    `$cert = Import-PfxCertificate `
-        -FilePath `$pfxPath `
-        -CertStoreLocation Cert:\LocalMachine\My `
-        -Password `$secPass
-
-    Write-Log "Cert imported. Thumbprint: `$`(`$cert.Thumbprint)"
-    Write-Log "Subject: `$`(`$cert.Subject)"
-    Write-Log "Expiry:  `$`(`$cert.NotAfter)"
-
-    Remove-Item `$pfxPath -Force
-
-    Import-Module WebAdministration
-    `$binding = Get-WebBinding -Name `$SiteName -Protocol "https" -Port `$Port
-    if (`$binding) {
-        `$binding.AddSslCertificate(`$cert.Thumbprint, "My")
-        Write-Log "IIS HTTPS binding updated for site: `$SiteName on port `$Port"
-    } else {
-        # Create new binding if it doesn't exist
-        New-WebBinding -Name `$SiteName -IP "*" -Port `$Port -Protocol https
-        `$binding = Get-WebBinding -Name `$SiteName -Protocol "https" -Port `$Port
-        `$binding.AddSslCertificate(`$cert.Thumbprint, "My")
-        Write-Log "IIS HTTPS binding created and updated for site: `$SiteName on port `$Port"
-    }
-
-    `$appPool = (Get-Website -Name `$SiteName).applicationPool
-    Restart-WebAppPool -Name `$appPool
-    Write-Log "App pool '`$appPool' restarted."
-
-    Write-Log "Cert bind complete."
-
-} catch {
-    Write-Log "ERROR: `$`(`$_.Exception.Message)"
-    exit 1
-}
-"@
-Set-Content -Path "C:\Vault\hooks\bind-cert.ps1" -Value $hookContent
-
-# Write agent config
+# ── Vault Agent config ─────────────────────────────────────────────────────
+# Written fully rendered by Terraform — no runtime variables needed.
+Write-Host "Writing Vault Agent config..."
 $agentConfig = @"
 ${vault_agent_config}
 "@
 Set-Content -Path "C:\Vault\vault-agent.hcl" -Value $agentConfig
 
-# Install chocolatey and openssl (required for pkcs12 export in the hook)
-if (!(Get-Command choco -ErrorAction SilentlyContinue)) {
-    Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-}
-choco install openssl -y
-choco install nssm -y
-
-# Setup Windows Service for Vault Agent using NSSM
+# ── Register as Windows service via NSSM ──────────────────────────────────
+Write-Host "Registering Vault Agent as Windows service..."
 nssm install VaultAgent "C:\Vault\vault.exe" "agent -config=C:\Vault\vault-agent.hcl"
-nssm set VaultAgent AppEnvironmentExtra "VAULT_PKI_ROLE_PATH=${pki_role_path}" "VAULT_COMMON_NAME=${common_name}" "VAULT_CERT_TTL=${cert_ttl}"
+nssm set VaultAgent AppDirectory   "C:\Vault"
+nssm set VaultAgent AppStdout      "C:\Vault\logs\vault-agent-stdout.log"
+nssm set VaultAgent AppStderr      "C:\Vault\logs\vault-agent-stderr.log"
+nssm set VaultAgent AppRotateFiles 1
+nssm set VaultAgent Start          SERVICE_AUTO_START
+# Three restart attempts with increasing backoff
+nssm set VaultAgent AppThrottle    5000
 nssm start VaultAgent
 
+Write-Host "========================================"
+Write-Host " Bootstrap complete — VaultAgent running"
+Write-Host "========================================"
 Stop-Transcript
 </powershell>
