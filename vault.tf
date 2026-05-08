@@ -102,7 +102,7 @@ resource "vault_pki_secret_backend_role" "roles" {
   for_each   = local.pki_roles
 
   backend            = vault_mount.pki_int.path
-  name               = "${each.key}-role"
+  name               = "${each.key}-role-${var.customer_name}"
   issuer_ref         = "vault-intermediate"
   allowed_domains    = split(",", each.value)
   allow_subdomains   = true
@@ -120,8 +120,10 @@ resource "vault_pki_secret_backend_role" "roles" {
 # ── Vault Policies ─────────────────────────────────────────────────────────
 resource "vault_policy" "policies" {
   for_each = local.pki_roles
-  name     = "pki-${each.key}"
-  policy   = file("${path.module}/configs/policy-${each.key}.hcl")
+  name     = "pki-${each.key}-${var.customer_name}"
+  policy   = templatefile("${path.module}/configs/policy-${each.key}.hcl", {
+    pki_int_path = vault_mount.pki_int.path
+  })
 }
 
 # ── AppRole Authentication ─────────────────────────────────────────────────
