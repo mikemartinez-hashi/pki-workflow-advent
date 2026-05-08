@@ -60,7 +60,7 @@ resource "local_file" "int_csr_file" {
 # Run the Sectigo Stand-in signing script
 resource "terraform_data" "sign_intermediate" {
   triggers_replace = [
-    vault_pki_secret_backend_intermediate_cert_request.int_csr.csr
+    timestamp()
   ]
 
   provisioner "local-exec" {
