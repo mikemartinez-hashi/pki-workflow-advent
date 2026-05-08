@@ -173,6 +173,7 @@ resource "aws_instance" "apache" {
   vpc_security_group_ids      = [aws_security_group.linux_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
   associate_public_ip_address = true
+  user_data_replace_on_change = true
 
   user_data = templatefile("${path.module}/templates/linux_userdata.sh.tpl", {
     vault_addr      = var.vault_addr
@@ -212,6 +213,7 @@ resource "aws_instance" "tomcat" {
   vpc_security_group_ids      = [aws_security_group.linux_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
   associate_public_ip_address = true
+  user_data_replace_on_change = true
 
   user_data = templatefile("${path.module}/templates/linux_userdata.sh.tpl", {
     vault_addr      = var.vault_addr
@@ -251,6 +253,7 @@ resource "aws_instance" "iis" {
   vpc_security_group_ids      = [aws_security_group.windows_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
   associate_public_ip_address = true
+  user_data_replace_on_change = true
 
   user_data = templatefile("${path.module}/templates/windows_userdata.ps1.tpl", {
     vault_addr      = var.vault_addr
