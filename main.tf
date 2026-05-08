@@ -14,18 +14,7 @@ terraform {
       version = "~> 2.5"
     }
   }
-
-  # HCP Terraform remote backend
-  cloud {
-    organization = "Mikes_sandbox"
-
-    workspaces {
-      name    = "tf-demo-pki-${var.customer_name}"
-      project = "Mike-Demos"
-    }
-  }
 }
-
 
 provider "aws" {
   region = var.aws_region

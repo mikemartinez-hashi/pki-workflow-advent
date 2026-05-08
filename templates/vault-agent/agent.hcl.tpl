@@ -45,7 +45,7 @@ template_config {
 }
 
 # Certificate + CA chain — triggers exec hook on renewal
-# Terraform resolves ${} at apply time; Vault Agent processes {{ }} at runtime.
+# Vault Agent template syntax is inside TPL heredocs and processed at runtime.
 template {
   contents = <<-TPL
     {{- with secret "${pki_role_path}" "common_name=${common_name}" "ttl=${cert_ttl}" -}}
