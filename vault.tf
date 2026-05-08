@@ -80,6 +80,19 @@ resource "vault_pki_secret_backend_intermediate_set_signed" "int_set_signed" {
   certificate = data.local_file.signed_int_cert.content
 }
 
+# Rename the default issuer to "vault-intermediate" so PKI roles can reference it by name.
+# Uses the Vault API PATCH endpoint since the provider resource lacks issuer_id export.
+resource "vault_generic_endpoint" "name_int_issuer" {
+  depends_on           = [vault_pki_secret_backend_intermediate_set_signed.int_set_signed]
+  path                 = "${vault_mount.pki_int.path}/issuer/default"
+  ignore_absent_fields = true
+  disable_delete       = true
+
+  data_json = jsonencode({
+    issuer_name = "vault-intermediate"
+  })
+}
+
 resource "vault_pki_secret_backend_config_urls" "int_urls" {
   backend                 = vault_mount.pki_int.path
   issuing_certificates    = ["${var.vault_addr}/v1/${vault_mount.pki_int.path}/ca"]
@@ -98,12 +111,15 @@ locals {
 }
 
 resource "vault_pki_secret_backend_role" "roles" {
-  depends_on = [vault_pki_secret_backend_intermediate_set_signed.int_set_signed]
+  depends_on = [
+    vault_pki_secret_backend_intermediate_set_signed.int_set_signed,
+    vault_generic_endpoint.name_int_issuer
+  ]
   for_each   = local.pki_roles
 
   backend            = vault_mount.pki_int.path
   name               = "${each.key}-role-${var.customer_name}"
-  issuer_ref         = "default"
+  issuer_ref         = "vault-intermediate"
   allowed_domains    = split(",", each.value)
   allow_subdomains   = true
   allow_bare_domains = false
