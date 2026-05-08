@@ -11,6 +11,15 @@ echo "========================================"
 apt-get update -qq
 apt-get install -y curl unzip jq openssl software-properties-common
 
+# Install AWS SSM Agent (since hc-base AMIs don't include it by default)
+mkdir -p /tmp/ssm
+cd /tmp/ssm
+curl -sL https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_amd64/amazon-ssm-agent.deb -o amazon-ssm-agent.deb
+dpkg -i amazon-ssm-agent.deb
+systemctl enable amazon-ssm-agent || true
+systemctl start amazon-ssm-agent || true
+cd -
+
 # Install Vault
 curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
 echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list

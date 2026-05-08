@@ -12,6 +12,13 @@ New-Item -ItemType Directory -Force -Path "C:\Vault\tpl" | Out-Null
 New-Item -ItemType Directory -Force -Path "C:\Vault\hooks" | Out-Null
 New-Item -ItemType Directory -Force -Path "C:\Vault\logs" | Out-Null
 
+# Install AWS SSM Agent (since hc-base AMIs don't include it by default)
+Write-Host "Installing AWS SSM Agent..."
+$ssmUrl = "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/windows_amd64/AmazonSSMAgentSetup.exe"
+Invoke-WebRequest -Uri $ssmUrl -OutFile "C:\AmazonSSMAgentSetup.exe"
+Start-Process -FilePath "C:\AmazonSSMAgentSetup.exe" -ArgumentList "/install /quiet /norestart" -Wait
+Remove-Item "C:\AmazonSSMAgentSetup.exe" -Force
+
 # Install Vault
 Write-Host "Downloading and installing Vault..."
 $latestUrl = "https://api.releases.hashicorp.com/v1/releases/vault/latest?license_class=oss"

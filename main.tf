@@ -169,9 +169,10 @@ resource "aws_instance" "apache" {
   ami                    = data.aws_ami.hc-base-ubuntu-2404["amd64"].id
   instance_type          = var.instance_type_linux
   key_name               = var.key_name
-  subnet_id              = tolist(data.aws_subnets.default.ids)[0]
-  vpc_security_group_ids = [aws_security_group.linux_sg.id]
-  iam_instance_profile   = aws_iam_instance_profile.ssm_profile.name
+  subnet_id                   = tolist(data.aws_subnets.default.ids)[0]
+  vpc_security_group_ids      = [aws_security_group.linux_sg.id]
+  iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
+  associate_public_ip_address = true
 
   user_data = templatefile("${path.module}/templates/linux_userdata.sh.tpl", {
     vault_addr      = var.vault_addr
@@ -207,9 +208,10 @@ resource "aws_instance" "tomcat" {
   ami                    = data.aws_ami.hc-base-ubuntu-2404["amd64"].id
   instance_type          = var.instance_type_linux
   key_name               = var.key_name
-  subnet_id              = tolist(data.aws_subnets.default.ids)[0]
-  vpc_security_group_ids = [aws_security_group.linux_sg.id]
-  iam_instance_profile   = aws_iam_instance_profile.ssm_profile.name
+  subnet_id                   = tolist(data.aws_subnets.default.ids)[0]
+  vpc_security_group_ids      = [aws_security_group.linux_sg.id]
+  iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
+  associate_public_ip_address = true
 
   user_data = templatefile("${path.module}/templates/linux_userdata.sh.tpl", {
     vault_addr      = var.vault_addr
@@ -245,9 +247,10 @@ resource "aws_instance" "iis" {
   ami                    = data.aws_ami.windows_2025.id
   instance_type          = var.instance_type_windows
   key_name               = var.key_name
-  subnet_id              = tolist(data.aws_subnets.default.ids)[0]
-  vpc_security_group_ids = [aws_security_group.windows_sg.id]
-  iam_instance_profile   = aws_iam_instance_profile.ssm_profile.name
+  subnet_id                   = tolist(data.aws_subnets.default.ids)[0]
+  vpc_security_group_ids      = [aws_security_group.windows_sg.id]
+  iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
+  associate_public_ip_address = true
 
   user_data = templatefile("${path.module}/templates/windows_userdata.ps1.tpl", {
     vault_addr      = var.vault_addr
