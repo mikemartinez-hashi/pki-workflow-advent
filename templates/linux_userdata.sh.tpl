@@ -28,7 +28,8 @@ echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
   https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
   > /etc/apt/sources.list.d/hashicorp.list
 apt-get update -qq
-apt-get install -y vault
+apt-get install -y vault=${vault_version}-1
+echo "Vault $(vault version) installed."
 
 # ── Platform packages ──────────────────────────────────────────────────────
 if [ "${platform}" = "apache" ]; then

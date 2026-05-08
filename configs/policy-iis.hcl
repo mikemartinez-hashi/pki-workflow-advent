@@ -1,6 +1,4 @@
-# IIS web server - certificate issuance only
-# Scope: ${role_name} on ${pki_int_path}, read own token
-
+# Certificate issuance only — path resolved at apply time via templatefile()
 path "${pki_int_path}/issue/${role_name}" {
   capabilities = ["create", "update"]
 }

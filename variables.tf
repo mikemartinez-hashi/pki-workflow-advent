@@ -74,3 +74,9 @@ variable "customer_name" {
   description = "Customer name used as a suffix for Vault mounts (e.g. advent)"
   type        = string
 }
+
+variable "vault_version" {
+  description = "Vault Agent version to install on EC2 instances. Must match the HCP Vault server version. Example: 1.21.3"
+  type        = string
+  default     = "1.21.3"
+}

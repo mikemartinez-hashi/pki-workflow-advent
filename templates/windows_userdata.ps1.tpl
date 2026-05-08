@@ -10,11 +10,10 @@ Write-Host "========================================"
 Write-Host " Vault Agent Bootstrap (Windows IIS)"
 Write-Host "========================================"
 
-# ── Install Vault ──────────────────────────────────────────────────────────
-Write-Host "Downloading Vault..."
-$latestUrl = "https://api.releases.hashicorp.com/v1/releases/vault/latest?license_class=oss"
-$vaultVer  = (Invoke-RestMethod -Uri $latestUrl).version
-$vaultUrl  = "https://releases.hashicorp.com/vault/$vaultVer/vault_$($vaultVer)_windows_amd64.zip"
+# ── Install Vault (pinned to match HCP Vault server version) ──────────────
+Write-Host "Downloading Vault ${vault_version}..."
+$vaultVer = "${vault_version}"
+$vaultUrl = "https://releases.hashicorp.com/vault/$vaultVer/vault_$($vaultVer)_windows_amd64.zip"
 Invoke-WebRequest -Uri $vaultUrl -OutFile "C:\Vault\vault.zip" -UseBasicParsing
 Expand-Archive -Path "C:\Vault\vault.zip" -DestinationPath "C:\Vault" -Force
 Remove-Item "C:\Vault\vault.zip"

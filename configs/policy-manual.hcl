@@ -1,8 +1,10 @@
-# Non-Terraform existing servers - manual/legacy role
-# Separate blast radius from Terraform-provisioned servers
-
+# Certificate issuance only — path resolved at apply time via templatefile()
 path "${pki_int_path}/issue/${role_name}" {
   capabilities = ["create", "update"]
+}
+
+path "${pki_int_path}/roles/${role_name}" {
+  capabilities = ["read"]
 }
 
 path "${pki_int_path}/cert/ca" {
