@@ -41,7 +41,7 @@ Set-Content -Path "C:\Vault\secret_id" -Value "${secret_id}" -NoNewline
 
 # Write templates
 $certTpl = @"
-{{- with secret (env "VAULT_PKI_ROLE_PATH") "common_name=" (env "VAULT_COMMON_NAME") "ttl=" (env "VAULT_CERT_TTL") -}}
+{{- with secret (env "VAULT_PKI_ROLE_PATH") (printf "common_name=%s" (env "VAULT_COMMON_NAME")) (printf "ttl=%s" (env "VAULT_CERT_TTL")) -}}
 {{ .Data.certificate -}}
 {{ range .Data.ca_chain -}}
 {{ . -}}
@@ -51,14 +51,14 @@ $certTpl = @"
 Set-Content -Path "C:\Vault\tpl\cert.tpl" -Value $certTpl
 
 $keyTpl = @"
-{{- with secret (env "VAULT_PKI_ROLE_PATH") "common_name=" (env "VAULT_COMMON_NAME") "ttl=" (env "VAULT_CERT_TTL") -}}
+{{- with secret (env "VAULT_PKI_ROLE_PATH") (printf "common_name=%s" (env "VAULT_COMMON_NAME")) (printf "ttl=%s" (env "VAULT_CERT_TTL")) -}}
 {{ .Data.private_key -}}
 {{- end }}
 "@
 Set-Content -Path "C:\Vault\tpl\key.tpl" -Value $keyTpl
 
 $chainTpl = @"
-{{- with secret (env "VAULT_PKI_ROLE_PATH") "common_name=" (env "VAULT_COMMON_NAME") "ttl=" (env "VAULT_CERT_TTL") -}}
+{{- with secret (env "VAULT_PKI_ROLE_PATH") (printf "common_name=%s" (env "VAULT_COMMON_NAME")) (printf "ttl=%s" (env "VAULT_CERT_TTL")) -}}
 {{ range .Data.ca_chain -}}
 {{ . -}}
 {{ end -}}

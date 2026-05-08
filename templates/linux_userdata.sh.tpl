@@ -64,7 +64,7 @@ chmod 600 $VAULT_DIR/role_id $VAULT_DIR/secret_id
 
 # Write templates
 cat << 'EOF' > $VAULT_DIR/tpl/cert.tpl
-{{- with secret (env "VAULT_PKI_ROLE_PATH") "common_name=" (env "VAULT_COMMON_NAME") "ttl=" (env "VAULT_CERT_TTL") -}}
+{{- with secret (env "VAULT_PKI_ROLE_PATH") (printf "common_name=%s" (env "VAULT_COMMON_NAME")) (printf "ttl=%s" (env "VAULT_CERT_TTL")) -}}
 {{ .Data.certificate -}}
 {{ range .Data.ca_chain -}}
 {{ . -}}
@@ -73,13 +73,13 @@ cat << 'EOF' > $VAULT_DIR/tpl/cert.tpl
 EOF
 
 cat << 'EOF' > $VAULT_DIR/tpl/key.tpl
-{{- with secret (env "VAULT_PKI_ROLE_PATH") "common_name=" (env "VAULT_COMMON_NAME") "ttl=" (env "VAULT_CERT_TTL") -}}
+{{- with secret (env "VAULT_PKI_ROLE_PATH") (printf "common_name=%s" (env "VAULT_COMMON_NAME")) (printf "ttl=%s" (env "VAULT_CERT_TTL")) -}}
 {{ .Data.private_key -}}
 {{- end }}
 EOF
 
 cat << 'EOF' > $VAULT_DIR/tpl/chain.tpl
-{{- with secret (env "VAULT_PKI_ROLE_PATH") "common_name=" (env "VAULT_COMMON_NAME") "ttl=" (env "VAULT_CERT_TTL") -}}
+{{- with secret (env "VAULT_PKI_ROLE_PATH") (printf "common_name=%s" (env "VAULT_COMMON_NAME")) (printf "ttl=%s" (env "VAULT_CERT_TTL")) -}}
 {{ range .Data.ca_chain -}}
 {{ . -}}
 {{ end -}}
@@ -184,7 +184,7 @@ User=root
 Environment="VAULT_PKI_ROLE_PATH=${pki_role_path}"
 Environment="VAULT_COMMON_NAME=${common_name}"
 Environment="VAULT_CERT_TTL=${cert_ttl}"
-ExecStart=/usr/bin/vault agent -config=$${VAULT_DIR}/vault-agent.hcl
+ExecStart=/usr/bin/vault agent -config=/etc/vault-agent/vault-agent.hcl
 Restart=on-failure
 RestartSec=10
 
