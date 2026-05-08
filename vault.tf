@@ -123,6 +123,7 @@ resource "vault_policy" "policies" {
   name     = "pki-${each.key}-${var.customer_name}"
   policy   = templatefile("${path.module}/configs/policy-${each.key}.hcl", {
     pki_int_path = vault_mount.pki_int.path
+    role_name    = "${each.key}-role-${var.customer_name}"
   })
 }
 

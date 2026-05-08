@@ -182,7 +182,7 @@ resource "aws_instance" "apache" {
     secret_id       = vault_approle_auth_backend_role_secret_id.secret_ids["apache"].secret_id
     common_name     = var.cert_domain_linux
     cert_ttl        = var.cert_ttl
-    pki_role_path   = "${vault_mount.pki_int.path}/issue/apache-role"
+    pki_role_path   = "${vault_mount.pki_int.path}/issue/apache-role-${var.customer_name}"
     platform        = "apache"
     vault_agent_config = templatefile("${path.module}/templates/vault-agent/agent.hcl.tpl", {
       vault_addr      = var.vault_addr
@@ -222,7 +222,7 @@ resource "aws_instance" "tomcat" {
     secret_id       = vault_approle_auth_backend_role_secret_id.secret_ids["tomcat"].secret_id
     common_name     = var.cert_domain_tomcat
     cert_ttl        = var.cert_ttl
-    pki_role_path   = "${vault_mount.pki_int.path}/issue/tomcat-role"
+    pki_role_path   = "${vault_mount.pki_int.path}/issue/tomcat-role-${var.customer_name}"
     platform        = "tomcat"
     vault_agent_config = templatefile("${path.module}/templates/vault-agent/agent.hcl.tpl", {
       vault_addr      = var.vault_addr
@@ -262,7 +262,7 @@ resource "aws_instance" "iis" {
     secret_id       = vault_approle_auth_backend_role_secret_id.secret_ids["iis"].secret_id
     common_name     = var.cert_domain_windows
     cert_ttl        = var.cert_ttl
-    pki_role_path   = "${vault_mount.pki_int.path}/issue/iis-role"
+    pki_role_path   = "${vault_mount.pki_int.path}/issue/iis-role-${var.customer_name}"
     vault_agent_config = templatefile("${path.module}/templates/vault-agent/agent.hcl.tpl", {
       vault_addr      = var.vault_addr
       vault_namespace = var.vault_namespace

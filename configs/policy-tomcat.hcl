@@ -1,11 +1,11 @@
 # Tomcat application server - separate policy boundary from Apache
-# Scope: tomcat-role on ${pki_int_path}, read own token
+# Scope: ${role_name} on ${pki_int_path}, read own token
 
-path "${pki_int_path}/issue/tomcat-role" {
+path "${pki_int_path}/issue/${role_name}" {
   capabilities = ["create", "update"]
 }
 
-path "${pki_int_path}/roles/tomcat-role" {
+path "${pki_int_path}/roles/${role_name}" {
   capabilities = ["read"]
 }
 

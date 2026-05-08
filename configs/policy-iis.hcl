@@ -1,11 +1,11 @@
 # IIS web server - certificate issuance only
-# Scope: iis-role on ${pki_int_path}, read own token
+# Scope: ${role_name} on ${pki_int_path}, read own token
 
-path "${pki_int_path}/issue/iis-role" {
+path "${pki_int_path}/issue/${role_name}" {
   capabilities = ["create", "update"]
 }
 
-path "${pki_int_path}/roles/iis-role" {
+path "${pki_int_path}/roles/${role_name}" {
   capabilities = ["read"]
 }
 

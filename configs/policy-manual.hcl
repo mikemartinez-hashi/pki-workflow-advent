@@ -1,7 +1,7 @@
 # Non-Terraform existing servers - manual/legacy role
 # Separate blast radius from Terraform-provisioned servers
 
-path "${pki_int_path}/issue/manual-role" {
+path "${pki_int_path}/issue/${role_name}" {
   capabilities = ["create", "update"]
 }
 
