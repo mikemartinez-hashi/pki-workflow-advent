@@ -80,13 +80,6 @@ resource "vault_pki_secret_backend_intermediate_set_signed" "int_set_signed" {
   certificate = data.local_file.signed_int_cert.content
 }
 
-# Name the newly imported issuer so PKI roles can reference it by name
-resource "vault_pki_secret_backend_issuer" "int_issuer" {
-  backend     = vault_mount.pki_int.path
-  issuer_ref  = vault_pki_secret_backend_intermediate_set_signed.int_set_signed.issuer_id
-  issuer_name = "vault-intermediate"
-}
-
 resource "vault_pki_secret_backend_config_urls" "int_urls" {
   backend                 = vault_mount.pki_int.path
   issuing_certificates    = ["${var.vault_addr}/v1/${vault_mount.pki_int.path}/ca"]
@@ -105,15 +98,12 @@ locals {
 }
 
 resource "vault_pki_secret_backend_role" "roles" {
-  depends_on = [
-    vault_pki_secret_backend_intermediate_set_signed.int_set_signed,
-    vault_pki_secret_backend_issuer.int_issuer
-  ]
+  depends_on = [vault_pki_secret_backend_intermediate_set_signed.int_set_signed]
   for_each   = local.pki_roles
 
   backend            = vault_mount.pki_int.path
   name               = "${each.key}-role-${var.customer_name}"
-  issuer_ref         = "vault-intermediate"
+  issuer_ref         = "default"
   allowed_domains    = split(",", each.value)
   allow_subdomains   = true
   allow_bare_domains = false
