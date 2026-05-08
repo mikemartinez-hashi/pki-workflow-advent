@@ -270,7 +270,7 @@ resource "aws_instance" "iis" {
       vault_addr      = var.vault_addr
       vault_namespace = var.vault_namespace
       approle_mount   = vault_auth_backend.approle.path
-      cert_base_dir   = "C:\\Vault"
+      cert_base_dir   = "C:/Vault"
       exec_command    = jsonencode(["powershell.exe", "-File", "C:\\Vault\\hooks\\bind-cert.ps1"])
       exec_timeout    = "60s"
     })

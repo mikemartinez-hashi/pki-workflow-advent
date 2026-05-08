@@ -154,24 +154,20 @@ chmod 600 /etc/vault-agent/role_id /etc/vault-agent/secret_id
 # Vault Agent processes the {{ }} syntax at runtime — no env() calls needed.
 cat > /etc/vault-agent/tpl/cert.tpl << 'EOF'
 {{- with secret "${pki_role_path}" "common_name=${common_name}" "ttl=${cert_ttl}" -}}
-{{ .Data.certificate -}}
-{{ range .Data.ca_chain -}}
-{{ . -}}
-{{ end -}}
+{{ .Data.certificate }}
 {{- end }}
 EOF
 
 cat > /etc/vault-agent/tpl/key.tpl << 'EOF'
 {{- with secret "${pki_role_path}" "common_name=${common_name}" "ttl=${cert_ttl}" -}}
-{{ .Data.private_key -}}
+{{ .Data.private_key }}
 {{- end }}
 EOF
 
 cat > /etc/vault-agent/tpl/chain.tpl << 'EOF'
 {{- with secret "${pki_role_path}" "common_name=${common_name}" "ttl=${cert_ttl}" -}}
-{{ range .Data.ca_chain -}}
-{{ . -}}
-{{ end -}}
+{{ range .Data.ca_chain }}{{ . }}
+{{ end }}
 {{- end }}
 EOF
 

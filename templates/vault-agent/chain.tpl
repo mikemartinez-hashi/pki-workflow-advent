@@ -1,5 +1,4 @@
-{{- with secret (env "VAULT_PKI_ROLE_PATH") "common_name=" (env "VAULT_COMMON_NAME") "ttl=" (env "VAULT_CERT_TTL") -}}
-{{ range .Data.ca_chain -}}
-{{ . -}}
-{{ end -}}
+{{- with secret "pki_int_advent/issue/apache-role-advent" "common_name=apache.demo.internal" "ttl=720h" -}}
+{{ range .Data.ca_chain }}{{ . }}
+{{ end }}
 {{- end }}

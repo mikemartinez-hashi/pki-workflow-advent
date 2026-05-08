@@ -10,7 +10,6 @@ Start-Transcript -Path "C:\Vault\logs\userdata-transcript.txt" -Append
 function Write-Log {
     param($msg)
     $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "[$ts] $msg" | Tee-Object -FilePath "C:\Vault\logs\userdata-transcript.txt" -Append
     Write-Host "[$ts] $msg"
 }
 
@@ -83,24 +82,20 @@ Write-Log "Writing Vault Agent template files..."
 
 [System.IO.File]::WriteAllText("C:\Vault\tpl\cert.tpl", @'
 {{- with secret "${pki_role_path}" "common_name=${common_name}" "ttl=${cert_ttl}" -}}
-{{ .Data.certificate -}}
-{{ range .Data.ca_chain -}}
-{{ . -}}
-{{ end -}}
+{{ .Data.certificate }}
 {{- end }}
 '@)
 
 [System.IO.File]::WriteAllText("C:\Vault\tpl\key.tpl", @'
 {{- with secret "${pki_role_path}" "common_name=${common_name}" "ttl=${cert_ttl}" -}}
-{{ .Data.private_key -}}
+{{ .Data.private_key }}
 {{- end }}
 '@)
 
 [System.IO.File]::WriteAllText("C:\Vault\tpl\chain.tpl", @'
 {{- with secret "${pki_role_path}" "common_name=${common_name}" "ttl=${cert_ttl}" -}}
-{{ range .Data.ca_chain -}}
-{{ . -}}
-{{ end -}}
+{{ range .Data.ca_chain }}{{ . }}
+{{ end }}
 {{- end }}
 '@)
 
@@ -160,9 +155,15 @@ exit 0
 
 # ── Vault Agent config ─────────────────────────────────────────────────────
 Write-Log "Writing Vault Agent config..."
-[System.IO.File]::WriteAllText("C:\Vault\vault-agent.hcl", @"
+# Write with explicit UTF-8 no-BOM -- bare BOM causes HCL parse failures
+$agentHcl = @"
 ${vault_agent_config}
-"@)
+"@
+[System.IO.File]::WriteAllText(
+    "C:\Vault\vault-agent.hcl",
+    $agentHcl,
+    [System.Text.UTF8Encoding]::new($false)
+)
 
 # ── Register VaultAgent service via NSSM ──────────────────────────────────
 Write-Log "Registering VaultAgent service..."
@@ -175,8 +176,25 @@ try {
     & $nssmExe set       VaultAgent AppRotateFiles 1
     & $nssmExe set       VaultAgent Start          SERVICE_AUTO_START
     & $nssmExe set       VaultAgent AppThrottle    5000
-    & $nssmExe start     VaultAgent
-    Write-Log "VaultAgent service started."
+
+    # Start the service and verify it comes up running (not paused)
+    & $nssmExe start VaultAgent
+    Start-Sleep -Seconds 5
+
+    $svc = Get-Service -Name VaultAgent -ErrorAction SilentlyContinue
+    if ($svc.Status -eq "Paused") {
+        Write-Log "Service paused — resuming..."
+        Resume-Service -Name VaultAgent
+        Start-Sleep -Seconds 3
+    }
+    if ($svc.Status -ne "Running") {
+        Write-Log "Service not running after start — attempting restart..."
+        & $nssmExe restart VaultAgent
+        Start-Sleep -Seconds 5
+    }
+
+    $finalStatus = (Get-Service -Name VaultAgent).Status
+    Write-Log "VaultAgent service status: $finalStatus"
 } catch {
     Write-Log "ERROR: Service registration failed: $_"
     Stop-Transcript; exit 1
